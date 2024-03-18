@@ -77,10 +77,6 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					{
 						RValue newFont = g_ModuleInterface->CallBuiltin("font_add", { std::format("LanguagePacks/{}", line), 9, true, false, 32, 65374 });
 						g_ModuleInterface->CallBuiltin("variable_global_set", { curFontName, newFont });
-						RValue returnVal;
-						RValue** args = new RValue * [1];
-						args[0] = &newFont;
-						origScribbleFontAddFromProjectScript(Self, nullptr, returnVal, 1, args);
 					}
 					languageFontList.push_back(g_ModuleInterface->CallBuiltin("variable_global_get", { curFontName }));
 					lineCount++;
