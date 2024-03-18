@@ -6,6 +6,7 @@
 #include <regex>
 
 std::vector<std::string> languageNamesList;
+std::vector<RValue> languageFontList;
 
 struct languageMappingData
 {
@@ -30,10 +31,11 @@ struct languageMappingData
 
 void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, RValue*>& Args)
 {
-	UNREFERENCED_PARAMETER(Args);
+	CInstance* Self = std::get<0>(Args);
 	
 	CreateDirectory(L"LanguagePacks", NULL);
 	languageNamesList.clear();
+	languageFontList.clear();
 	for (auto& entry : fs::directory_iterator("LanguagePacks"))
 	{
 		if (wcsstr(entry.path().extension().c_str(), L".lang") != 0)
@@ -45,9 +47,45 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 			std::string line;
 			int lineCount = 1;
 			std::unordered_map<std::string, languageMappingData> langMapping;
+			bool hasObtainedFont = true;
 			// Parse the language pack and get the mappings
 			while (std::getline(inFile, line))
 			{
+				if (lineCount == 1)
+				{
+					if (line.compare("NONE") == 0)
+					{
+						languageFontList.push_back(RValue());
+						lineCount++;
+						continue;
+					}
+					if (!line.contains(".ttf"))
+					{
+						g_ModuleInterface->Print(CM_RED, "First line of language pack %s must be the ttf file name or NONE", newLangName);
+						hasObtainedFont = false;
+						break;
+					}
+					if (!std::filesystem::exists(std::format("LanguagePacks/{}", line)))
+					{
+						g_ModuleInterface->Print(CM_RED, "Couldn't find the ttf file %s for %s. Make sure that it is in the LanguagePacks directory", line, newLangName);
+						hasObtainedFont = false;
+						break;
+					}
+
+					std::string curFontName = std::format("keepAliveFont{}", line);
+					if (!g_ModuleInterface->CallBuiltin("variable_global_exists", { curFontName }).AsBool())
+					{
+						RValue newFont = g_ModuleInterface->CallBuiltin("font_add", { std::format("LanguagePacks/{}", line), 9, true, false, 32, 65374 });
+						g_ModuleInterface->CallBuiltin("variable_global_set", { curFontName, newFont });
+						RValue returnVal;
+						RValue** args = new RValue * [1];
+						args[0] = &newFont;
+						origScribbleFontAddFromProjectScript(Self, nullptr, returnVal, 1, args);
+					}
+					languageFontList.push_back(g_ModuleInterface->CallBuiltin("variable_global_get", { curFontName }));
+					lineCount++;
+					continue;
+				}
 				size_t delimiterPos = line.find_first_of(' ');
 				std::string key = line.substr(0, delimiterPos);
 				std::string value = line.substr(delimiterPos + 1);
@@ -102,6 +140,11 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				lineCount++;
 			}
 
+			if (!hasObtainedFont)
+			{
+				continue;
+			}
+
 			// Add the language pack to the TextContainer
 			RValue textContainer = g_ModuleInterface->CallBuiltin("variable_global_get", { "TextContainer" });
 			RValue textContainerKeyNames = g_ModuleInterface->CallBuiltin("variable_instance_get_names", { textContainer });
@@ -138,6 +181,12 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 			}
 		}
 	}
+
+	RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "SetLanguage" });
+	RValue CurrentLanguage = g_ModuleInterface->CallBuiltin("variable_global_get", { "CurrentLanguage" });
+	RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { RValue(1.0), CurrentLanguage });
+	g_ModuleInterface->CallBuiltin("method_call", { SetLanguageMethod, SetLanguageMethodArr });
+
 	if (!std::filesystem::exists("LanguagePacks/TextContainer.out"))
 	{
 		RValue textContainer = g_ModuleInterface->CallBuiltin("variable_global_get", { "TextContainer" });

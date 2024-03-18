@@ -142,6 +142,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="include\YYToolkit\Shared.cpp" />
+    <ClCompile Include="source\BuiltInFunctions.cpp" />
     <ClCompile Include="source\CodeEvents.cpp" />
     <ClCompile Include="source\ModuleMain.cpp" />
     <ClCompile Include="source\ScriptFunctions.cpp" />
@@ -154,6 +155,7 @@
     <ClInclude Include="include\YYTKTypes\RefThing.h" />
     <ClInclude Include="include\YYTKTypes\YYObjectBase.h" />
     <ClInclude Include="include\YYToolkit\Shared.hpp" />
+    <ClInclude Include="source\BuiltInFunctions.h" />
     <ClInclude Include="source\CodeEvents.h" />
     <ClInclude Include="source\ModuleMain.h" />
     <ClInclude Include="source\ScriptFunctions.h" />
