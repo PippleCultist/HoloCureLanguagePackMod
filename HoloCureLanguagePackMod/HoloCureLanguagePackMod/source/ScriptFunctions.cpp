@@ -25,7 +25,7 @@ RValue& SelectRightOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RV
 				int selectedLanguageOption = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "selectedLanguageOption" }).m_Real));
 				RValue languageOptions = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "languageOptions" });
 				int languageOptionsLen = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { languageOptions }).m_Real));
-				if (selectedLanguageOption < languageOptionsLen)
+				if (selectedLanguageOption < languageOptionsLen - 1)
 				{
 					selectedLanguageOption++;
 				}
@@ -34,8 +34,6 @@ RValue& SelectRightOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RV
 					selectedLanguageOption = 0;
 				}
 				g_ModuleInterface->CallBuiltin("variable_instance_set", { Self, "selectedLanguageOption", static_cast<double>(selectedLanguageOption) });
-				RValue returnVal;
-				origSaveSettingsScript(Self, Other, returnVal, 0, nullptr);
 				callbackManagerInterfacePtr->CancelOriginalFunction();
 			}
 		}
@@ -69,8 +67,6 @@ RValue& SelectLeftOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVa
 					selectedLanguageOption = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { languageOptions }).m_Real - 1));
 				}
 				g_ModuleInterface->CallBuiltin("variable_instance_set", { Self, "selectedLanguageOption", static_cast<double>(selectedLanguageOption) });
-				RValue returnVal;
-				origSaveSettingsScript(Self, Other, returnVal, 0, nullptr);
 				callbackManagerInterfacePtr->CancelOriginalFunction();
 			}
 		}
@@ -122,7 +118,11 @@ RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& Return
 {
 	if (curLanguagePackFont != -1)
 	{
-		g_ModuleInterface->CallBuiltin("draw_set_font", { languageFontList[curLanguagePackFont] });
+		RValue curFont = languageFontList[curLanguagePackFont];
+		if (curFont.m_Kind == VALUE_UNDEFINED)
+		{
+			return ReturnValue;
+		}
 		std::string text = std::string(Args[2]->AsString());
 		const std::regex regexPattern("\\[(c_|/)[a-zA-Z]+?\\]");
 		int lastPos = 0;
@@ -199,7 +199,11 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 	{
 		double textStartXPos = Args[0]->m_Real;
 		double textStartYPos = Args[1]->m_Real;
-		g_ModuleInterface->CallBuiltin("draw_set_font", { languageFontList[curLanguagePackFont] });
+		RValue curFont = languageFontList[curLanguagePackFont];
+		if (curFont.m_Kind == VALUE_UNDEFINED)
+		{
+			return ReturnValue;
+		}
 		std::string text = std::string(Args[2]->AsString());
 		double sizeOfLineWrap = Args[3]->m_Real;
 		// Args[4] seems like it's the max number of characters it can draw. Not sure how important that is right now
@@ -246,5 +250,36 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 RValue& ScribbleFontScaleBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
 {
 	callbackManagerInterfacePtr->CancelOriginalFunction();
+	return ReturnValue;
+}
+
+RValue& SaveSettingsBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
+{
+	if (curLanguagePackFont != -1)
+	{
+		RValue objTextController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
+		RValue languages = g_ModuleInterface->CallBuiltin("variable_instance_get", { objTextController, "languages" });
+		RValue english = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, "English" });
+		RValue languageName;
+		if (english.m_Kind == VALUE_STRING)
+		{
+			languageName = english;
+		}
+		else
+		{
+			RValue languagesNames = g_ModuleInterface->CallBuiltin("variable_instance_get_names", { languages });
+			languageName = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, languagesNames[0] });
+		}
+		g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageName });
+	}
+	return ReturnValue;
+}
+
+RValue& SaveSettingsAfter(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
+{
+	if (curLanguagePackFont != -1)
+	{
+		g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageNamesList[curLanguagePackFont] });
+	}
 	return ReturnValue;
 }

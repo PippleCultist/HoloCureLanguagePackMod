@@ -9,6 +9,11 @@ void DrawTextBefore(RValue* Result, CInstance* Self, CInstance* Other, int numAr
 {
 	if (curLanguagePackFont != -1)
 	{
-		g_ModuleInterface->CallBuiltin("draw_set_font", { languageFontList[curLanguagePackFont] });
+		RValue curFont = languageFontList[curLanguagePackFont];
+		if (curFont.m_Kind == VALUE_UNDEFINED)
+		{
+			return;
+		}
+		g_ModuleInterface->CallBuiltin("draw_set_font", { curFont });
 	}
 }

@@ -15,7 +15,6 @@ CallbackManagerInterface* callbackManagerInterfacePtr = nullptr;
 YYRunnerInterface g_RunnerInterface;
 YYTKInterface* g_ModuleInterface = nullptr;
 
-PFUNC_YYGMLScript origSaveSettingsScript = nullptr;
 PFUNC_YYGMLScript origScribbleFontAddFromProjectScript = nullptr;
 
 int objTextControllerIndex = -1;
@@ -49,7 +48,7 @@ EXPORTED AurieStatus ModuleInitialize(
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
 
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SaveSettings", nullptr, nullptr, &origSaveSettingsScript)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SaveSettings", SaveSettingsBefore, SaveSettingsAfter, nullptr)))
 	{
 		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SaveSettings");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
