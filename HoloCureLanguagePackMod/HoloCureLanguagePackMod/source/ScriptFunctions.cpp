@@ -138,7 +138,10 @@ RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& Return
 				// Assume this is color
 				RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
 				RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
-				g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
+				if (curColor.m_Kind != VALUE_UNDEFINED)
+				{
+					g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
+				}
 			}
 			else if (text[pos + 1] == '/')
 			{
@@ -228,7 +231,10 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 				// Assume this is color
 				RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
 				RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
-				g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
+				if (curColor.m_Kind != VALUE_UNDEFINED)
+				{
+					g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
+				}
 			}
 			else if (text[pos + 1] == '/')
 			{

@@ -12,19 +12,25 @@ struct languageMappingData
 {
 	std::string stringMapping;
 	std::vector<std::string> arrayMapping;
-	bool isStringMapping;
+	std::vector<std::vector<std::string>> arrayOfArrayMapping;
+	int mappingType;
 
-	languageMappingData() : isStringMapping(false)
+	languageMappingData() : mappingType(0)
 	{
 	}
 
 	languageMappingData(std::string stringMapping) :
-		stringMapping(stringMapping), isStringMapping(true)
+		stringMapping(stringMapping), mappingType(0)
 	{
 	}
 
 	languageMappingData(std::vector<std::string> arrayMapping) :
-		arrayMapping(arrayMapping), isStringMapping(false)
+		arrayMapping(arrayMapping), mappingType(1)
+	{
+	}
+
+	languageMappingData(std::vector<std::vector<std::string>> arrayOfArrayMapping) :
+		arrayOfArrayMapping(arrayOfArrayMapping), mappingType(2)
 	{
 	}
 };
@@ -89,7 +95,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				{
 					if (value[value.size() - 1] != '"')
 					{
-						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted", lineCount, newLangName);
+						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
 					}
 					else
 					{
@@ -100,12 +106,12 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				{
 					if (value[value.size() - 1] != ']')
 					{
-						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted", lineCount, newLangName);
+						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
 					}
 					else
 					{
 						std::vector<std::string> arrayMapping;
-						std::regex regexPattern(", ");
+						std::regex regexPattern(", (?=\"[^, ])");
 						std::regex_token_iterator<std::string::iterator> rend;
 						std::regex_token_iterator<std::string::iterator> regexTokenIterator (value.begin() + 1, value.end() - 1, regexPattern, -1);
 						while (regexTokenIterator != rend)
@@ -113,25 +119,61 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 							arrayMapping.push_back(*regexTokenIterator++);
 						}
 						bool isMalformatted = false;
+						bool hasInnerArray = false;
 						for (std::string& mapping : arrayMapping)
 						{
 							if (mapping[0] != '"' || mapping[mapping.size() - 1] != '"')
 							{
-								g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted", lineCount, newLangName);
+								g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
 								isMalformatted = true;
 								break;
+							}
+							if (mapping[1] == '[' && mapping[mapping.size() - 2] == ']')
+							{
+								hasInnerArray = true;
 							}
 							mapping = mapping.substr(1, mapping.size() - 2);
 						}
 						if (!isMalformatted)
 						{
-							langMapping[key] = languageMappingData(arrayMapping);
+							if (hasInnerArray)
+							{
+								std::vector<std::vector<std::string>> arrayOfArrayMapping;
+								for (std::string& mapping : arrayMapping)
+								{
+									if (mapping[0] != '[' || mapping[mapping.size() - 1] != ']')
+									{
+										g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
+										isMalformatted = true;
+										break;
+									}
+									std::vector<std::string> innerMapping;
+
+									std::regex innerRegexPattern("\",\"");
+									std::regex_token_iterator<std::string::iterator> innerRend;
+									std::regex_token_iterator<std::string::iterator> innerRegexTokenIterator(mapping.begin() + 3, mapping.end() - 3, innerRegexPattern, -1);
+									while (innerRegexTokenIterator != innerRend)
+									{
+										innerMapping.push_back(*innerRegexTokenIterator++);
+									}
+
+									arrayOfArrayMapping.push_back(innerMapping);
+								}
+								if (!isMalformatted)
+								{
+									langMapping[key] = languageMappingData(arrayOfArrayMapping);
+								}
+							}
+							else
+							{
+								langMapping[key] = languageMappingData(arrayMapping);
+							}
 						}
 					}
 				}
 				else
 				{
-					g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted", lineCount, newLangName);
+					g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
 				}
 				lineCount++;
 			}
@@ -154,16 +196,30 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				{
 					printf("Applying mapping for %s\n", curKey.AsString().data());
 					languageMappingData curMapping = checkLangMapping->second;
-					if (curMapping.isStringMapping)
+					if (curMapping.mappingType == 0)
 					{
 						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, curMapping.stringMapping });
 					}
-					else
+					else if (curMapping.mappingType == 1)
 					{
 						RValue textArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayMapping.size()) });
 						for (int j = 0; j < curMapping.arrayMapping.size(); j++)
 						{
 							textArray[j] = curMapping.arrayMapping[j];
+						}
+						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, textArray });
+					}
+					else if (curMapping.mappingType == 2)
+					{
+						RValue textArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayOfArrayMapping.size()) });
+						for (int j = 0; j < curMapping.arrayOfArrayMapping.size(); j++)
+						{
+							RValue innerTextArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayOfArrayMapping[j].size()) });
+							for (int k = 0; k < curMapping.arrayOfArrayMapping[j].size(); k++)
+							{
+								innerTextArray[k] = curMapping.arrayOfArrayMapping[j][k];
+							}
+							textArray[j] = innerTextArray;
 						}
 						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, textArray });
 					}

@@ -53,7 +53,7 @@ EXPORTED AurieStatus ModuleInitialize(
 		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SaveSettings");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
-	
+
 	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SelectRight_gml_Object_obj_Options_Create_0", SelectRightOptionsCreateFuncBefore, nullptr, nullptr)))
 	{
 		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SelectRight_gml_Object_obj_Options_Create_0");
