@@ -9,6 +9,7 @@ extern YYRunnerInterface g_RunnerInterface;
 
 extern std::ofstream outFile;
 extern PFUNC_YYGMLScript origScribbleFontAddFromProjectScript;
+extern PFUNC_YYGMLScript origFoodRecipesScript;
 
 extern int objTextControllerIndex;
 extern int jpFont;

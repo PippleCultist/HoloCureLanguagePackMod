@@ -16,6 +16,7 @@ YYRunnerInterface g_RunnerInterface;
 YYTKInterface* g_ModuleInterface = nullptr;
 
 PFUNC_YYGMLScript origScribbleFontAddFromProjectScript = nullptr;
+PFUNC_YYGMLScript origFoodRecipesScript = nullptr;
 
 int objTextControllerIndex = -1;
 int jpFont = -1;
@@ -89,7 +90,11 @@ EXPORTED AurieStatus ModuleInitialize(
 		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_scribble_font_scale");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
-	
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_FoodRecipes", nullptr, nullptr, &origFoodRecipesScript)))
+	{
+		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_FoodRecipes");
+		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
+	}
 
 	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterCodeEventCallback(MODNAME, "gml_Object_obj_TextController_Create_0", nullptr, TextControllerCreateAfter)))
 	{

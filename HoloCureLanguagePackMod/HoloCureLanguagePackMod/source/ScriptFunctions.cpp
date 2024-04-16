@@ -101,6 +101,8 @@ RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVal
 						curLanguagePackFont = static_cast<int>(selectedLanguageOption - languageOptionsLen + languageNamesList.size());
 						RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { RValue(1.0), languageNamesList[curLanguagePackFont] });
 						g_ModuleInterface->CallBuiltin("method_call", { SetLanguageMethod, SetLanguageMethodArr });
+						RValue returnVal;
+						origFoodRecipesScript(Self, Other, returnVal, 0, nullptr);
 						callbackManagerInterfacePtr->CancelOriginalFunction();
 					}
 					else
