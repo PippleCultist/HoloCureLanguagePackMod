@@ -7,6 +7,7 @@
 
 std::vector<std::string> languageNamesList;
 std::vector<RValue> languageFontList;
+std::vector<std::unordered_map<std::string, std::string>> languageTextSwapMap;
 
 struct languageMappingData
 {
@@ -42,12 +43,14 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 	CreateDirectory(L"LanguagePacks", NULL);
 	languageNamesList.clear();
 	languageFontList.clear();
+	languageTextSwapMap.clear();
 	for (auto& entry : fs::directory_iterator("LanguagePacks"))
 	{
 		if (wcsstr(entry.path().extension().c_str(), L".lang") != 0)
 		{
 			std::string newLangName = entry.path().stem().string();
 			languageNamesList.push_back(newLangName);
+			languageTextSwapMap.push_back(std::unordered_map<std::string, std::string>());
 			std::ifstream inFile;
 			inFile.open(entry.path());
 			std::string line;
@@ -88,9 +91,38 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					lineCount++;
 					continue;
 				}
+				if (line[0] == '"')
+				{
+					size_t delimiterPos = line.find('"', 1) + 1;
+					std::string key = line.substr(0, delimiterPos);
+					std::string value = line.substr(delimiterPos + 1);
+					if (key[key.size() - 1] != '"')
+					{
+						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark for key)", lineCount, newLangName);
+					}
+					else
+					{
+						if (value[0] != '"')
+						{
+							g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
+						}
+						else if (value[value.size() - 1] != '"')
+						{
+							g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
+						}
+						else
+						{
+							printf("Adding mapping %s to %s\n", key.c_str(), value.c_str());
+							languageTextSwapMap[languageTextSwapMap.size() - 1][key.substr(1, key.size() - 2)] = value.substr(1, value.size() - 2);
+						}
+					}
+					lineCount++;
+					continue;
+				}
 				size_t delimiterPos = line.find_first_of(' ');
 				std::string key = line.substr(0, delimiterPos);
 				std::string value = line.substr(delimiterPos + 1);
+
 				if (value[0] == '"')
 				{
 					if (value[value.size() - 1] != '"')
@@ -141,6 +173,13 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 								std::vector<std::vector<std::string>> arrayOfArrayMapping;
 								for (std::string& mapping : arrayMapping)
 								{
+									if (mapping[0] != '[' && mapping[mapping.size() - 1] != ']') // Assume this is a regular string rather than an array
+									{
+										std::vector<std::string> innerMapping;
+										innerMapping.push_back(mapping);
+										arrayOfArrayMapping.push_back(innerMapping);
+										continue;
+									}
 									if (mapping[0] != '[' || mapping[mapping.size() - 1] != ']')
 									{
 										g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
@@ -214,6 +253,11 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 						RValue textArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayOfArrayMapping.size()) });
 						for (int j = 0; j < curMapping.arrayOfArrayMapping.size(); j++)
 						{
+							if (curMapping.arrayOfArrayMapping[j].size() == 1) // Special exception if a string is put in the array rather than an array
+							{
+								textArray[j] = curMapping.arrayOfArrayMapping[j][0];
+								continue;
+							}
 							RValue innerTextArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayOfArrayMapping[j].size()) });
 							for (int k = 0; k < curMapping.arrayOfArrayMapping[j].size(); k++)
 							{

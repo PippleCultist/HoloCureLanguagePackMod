@@ -5,6 +5,8 @@
 #include "CodeEvents.h"
 #include <regex>
 
+extern std::vector<std::unordered_map<std::string, std::string>> languageTextSwapMap;
+
 int curLanguagePackFont = -1;
 
 RValue& SelectRightOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
@@ -116,16 +118,35 @@ RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVal
 	return ReturnValue;
 }
 
+std::string getTextSwapMapping(RValue** Args)
+{
+	if (Args[2]->m_Kind != VALUE_STRING) // Seems like the argument could be a non string? Probably converts it under the hood to a string
+	{
+		return "";
+	}
+	std::string text = std::string(Args[2]->AsString());
+	if (curLanguagePackFont != -1)
+	{
+		auto findMapping = languageTextSwapMap[curLanguagePackFont].find(text);
+		if (findMapping != languageTextSwapMap[curLanguagePackFont].end())
+		{
+			text = findMapping->second;
+			*Args[2] = text;
+		}
+	}
+	return text;
+}
+
 RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
 {
 	if (curLanguagePackFont != -1)
 	{
 		RValue curFont = languageFontList[curLanguagePackFont];
+		std::string text = getTextSwapMapping(Args);
 		if (curFont.m_Kind == VALUE_UNDEFINED)
 		{
 			return ReturnValue;
 		}
-		std::string text = std::string(Args[2]->AsString());
 		const std::regex regexPattern("\\[(c_|/)[a-zA-Z]+?\\]");
 		int lastPos = 0;
 		double curTextOffset = 0;
@@ -205,11 +226,11 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 		double textStartXPos = Args[0]->m_Real;
 		double textStartYPos = Args[1]->m_Real;
 		RValue curFont = languageFontList[curLanguagePackFont];
+		std::string text = getTextSwapMapping(Args);
 		if (curFont.m_Kind == VALUE_UNDEFINED)
 		{
 			return ReturnValue;
 		}
-		std::string text = std::string(Args[2]->AsString());
 		double sizeOfLineWrap = Args[3]->m_Real;
 		// Args[4] seems like it's the max number of characters it can draw. Not sure how important that is right now
 		// Args[5] seems like it's always undefined
