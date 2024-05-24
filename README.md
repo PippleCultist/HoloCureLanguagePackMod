@@ -19,3 +19,5 @@ Each line after that will be assigning the text you want in the game. The text y
 
 For example, to replace the text for the title buttons, you would have it in the format `titleButtons ["Play", "Holo House", "Shop", "Leaderboard", "Achievements", "Settings", "Credits", "Quit"]`, and replacing the text for half angel will be in the format `HalfAngelName "Half Angel"`.
 Each different mapping must be on its own line in the previously mentioned format. `TextContainer.out` will be created whenever the game runs with the mod installed which you can use to create your own language pack.
+
+Some text might not be in the text container due to it being hard coded into the game. In those cases, you can use the direct mapping feature which will be in the format `"HP" "testHP"`. It must be exactly the same as the text you want to replace which includes capitalization.
