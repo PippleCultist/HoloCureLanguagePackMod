@@ -122,7 +122,7 @@ std::string getTextSwapMapping(RValue** Args)
 {
 	if (Args[2]->m_Kind != VALUE_STRING) // Seems like the argument could be a non string? Probably converts it under the hood to a string
 	{
-		return "";
+		return std::string(Args[2]->AsString());
 	}
 	std::string text = std::string(Args[2]->AsString());
 	if (curLanguagePackFont != -1)
@@ -174,7 +174,7 @@ RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& Return
 			curTextOffset += g_ModuleInterface->CallBuiltin("string_width", { drawStr }).m_Real;
 			lastPos = static_cast<int>(pos + match.length());
 		}
-		if (lastPos != text.size() - 1)
+		if (lastPos < text.size())
 		{
 			std::string drawStr = text.substr(lastPos);
 			g_ModuleInterface->CallBuiltin("draw_text", { Args[0]->m_Real + curTextOffset, *Args[1], drawStr });
@@ -266,7 +266,7 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 			}
 			lastPos = static_cast<int>(pos + match.length());
 		}
-		if (lastPos != text.size() - 1)
+		if (lastPos < text.size())
 		{
 			std::string drawStr = text.substr(lastPos);
 			drawWrappingText(curTextXOffset, curTextYOffset, drawStr, sizeOfLineWrap, textStartXPos, textStartYPos);

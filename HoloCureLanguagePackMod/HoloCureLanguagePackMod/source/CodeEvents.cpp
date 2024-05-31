@@ -36,6 +36,18 @@ struct languageMappingData
 	}
 };
 
+void strReplaceAll(std::string& inputStr, std::string targetReplacementStr, std::string changeToStr)
+{
+	size_t pos = inputStr.find(targetReplacementStr);
+	size_t targetReplacementStrSize = targetReplacementStr.size();
+	size_t changeToStrSize = changeToStr.size();
+	while (pos != std::string::npos)
+	{
+		inputStr.replace(pos, targetReplacementStrSize, changeToStr);
+		pos = inputStr.find(targetReplacementStr, pos + changeToStrSize);
+	}
+}
+
 void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, RValue*>& Args)
 {
 	CInstance* Self = std::get<0>(Args);
@@ -96,6 +108,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					size_t delimiterPos = line.find('"', 1) + 1;
 					std::string key = line.substr(0, delimiterPos);
 					std::string value = line.substr(delimiterPos + 1);
+					strReplaceAll(value, "\\n", "\n");
 					if (key[key.size() - 1] != '"')
 					{
 						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark for key)", lineCount, newLangName);
@@ -112,7 +125,8 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 						}
 						else
 						{
-							printf("Adding mapping %s to %s\n", key.c_str(), value.c_str());
+							// TODO: Should probably add a debug mode
+//							printf("Adding mapping %s to %s\n", key.c_str(), value.c_str());
 							languageTextSwapMap[languageTextSwapMap.size() - 1][key.substr(1, key.size() - 2)] = value.substr(1, value.size() - 2);
 						}
 					}
@@ -122,6 +136,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				size_t delimiterPos = line.find_first_of(' ');
 				std::string key = line.substr(0, delimiterPos);
 				std::string value = line.substr(delimiterPos + 1);
+				strReplaceAll(value, "\\n", "\n");
 
 				if (value[0] == '"')
 				{
@@ -233,7 +248,8 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				auto checkLangMapping = langMapping.find(std::string(curKey.AsString()));
 				if (checkLangMapping != langMapping.end())
 				{
-					printf("Applying mapping for %s\n", curKey.AsString().data());
+					// TODO: Should probably add a debug mode
+//					printf("Applying mapping for %s\n", curKey.AsString().data());
 					languageMappingData curMapping = checkLangMapping->second;
 					if (curMapping.mappingType == 0)
 					{
@@ -314,7 +330,9 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					int textArrLen = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { curText }).m_Real));
 					for (int k = 0; k < textArrLen; k++)
 					{
-						outFile << "\"" << curText[k].AsString().data() << "\"";
+						std::string curStr = std::string(curText[k].AsString());
+						strReplaceAll(curStr, "\n", "\\n");
+						outFile << "\"" << curStr.c_str() << "\"";
 						if (k != textArrLen - 1)
 						{
 							outFile << ", ";
@@ -329,7 +347,10 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				}
 				else if (curText.m_Kind == VALUE_STRING)
 				{
-					outFile << "\t\t" << lang.AsString().data() << ": \"" << curText.AsString().data() << "\"";
+					outFile << "\t\t" << lang.AsString().data() << ": \"";
+					std::string curStr = std::string(curText.AsString());
+					strReplaceAll(curStr, "\n", "\\n");
+					outFile << curText.AsString().data() << "\"";
 					if (j != textContainerKeyLen - 1)
 					{
 						outFile << ",";
