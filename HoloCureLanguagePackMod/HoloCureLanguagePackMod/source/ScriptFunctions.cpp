@@ -4,6 +4,7 @@
 #include "ModuleMain.h"
 #include "CodeEvents.h"
 #include <regex>
+#include <fstream>
 
 extern std::vector<std::unordered_map<std::string, std::string>> languageTextSwapMap;
 
@@ -95,14 +96,17 @@ RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVal
 					int selectedLanguageOption = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "selectedLanguageOption" }).m_Real));
 					RValue languageOptions = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "languageOptions" });
 					int languageOptionsLen = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { languageOptions }).m_Real));
+					std::ofstream outFile;
+					outFile.open("LanguagePacks/SavedLanguage");
 					// Selected one of the language packs
 					if (selectedLanguageOption >= languageOptionsLen - languageNamesList.size())
 					{
 						RValue textController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
 						RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { textController, "SetLanguage" });
 						curLanguagePackFont = static_cast<int>(selectedLanguageOption - languageOptionsLen + languageNamesList.size());
-						RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { RValue(1.0), languageNamesList[curLanguagePackFont] });
+						RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { 1, languageNamesList[curLanguagePackFont] });
 						g_ModuleInterface->CallBuiltin("method_call", { SetLanguageMethod, SetLanguageMethodArr });
+						outFile << languageNamesList[curLanguagePackFont];
 						RValue returnVal;
 						origFoodRecipesScript(Self, Other, returnVal, 0, nullptr);
 						callbackManagerInterfacePtr->CancelOriginalFunction();
@@ -111,6 +115,7 @@ RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVal
 					{
 						curLanguagePackFont = -1;
 					}
+					outFile.close();
 				}
 			}
 		}
@@ -135,53 +140,6 @@ std::string getTextSwapMapping(RValue** Args)
 		}
 	}
 	return text;
-}
-
-RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
-{
-	if (curLanguagePackFont != -1)
-	{
-		RValue curFont = languageFontList[curLanguagePackFont];
-		std::string text = getTextSwapMapping(Args);
-		if (curFont.m_Kind == VALUE_UNDEFINED)
-		{
-			return ReturnValue;
-		}
-		const std::regex regexPattern("\\[(c_|/)[a-zA-Z]+?\\]");
-		int lastPos = 0;
-		double curTextOffset = 0;
-		for (std::sregex_iterator it = std::sregex_iterator(text.begin(), text.end(), regexPattern); it != std::sregex_iterator(); it++)
-		{
-			std::smatch match = *it;
-			int pos = static_cast<int>(match.position(0));
-			std::string drawStr = text.substr(lastPos, pos - lastPos);
-			g_ModuleInterface->CallBuiltin("draw_text", { Args[0]->m_Real + curTextOffset, *Args[1], drawStr });
-			if (text[pos + 2] == '_')
-			{
-				// Assume this is color
-				RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
-				RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
-				if (curColor.m_Kind != VALUE_UNDEFINED)
-				{
-					g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
-				}
-			}
-			else if (text[pos + 1] == '/')
-			{
-				// Assume this is end color
-				g_ModuleInterface->CallBuiltin("draw_set_colour", { static_cast<double>(0xFFFFFF) });
-			}
-			curTextOffset += g_ModuleInterface->CallBuiltin("string_width", { drawStr }).m_Real;
-			lastPos = static_cast<int>(pos + match.length());
-		}
-		if (lastPos < text.size())
-		{
-			std::string drawStr = text.substr(lastPos);
-			g_ModuleInterface->CallBuiltin("draw_text", { Args[0]->m_Real + curTextOffset, *Args[1], drawStr });
-		}
-		callbackManagerInterfacePtr->CancelOriginalFunction();
-	}
-	return ReturnValue;
 }
 
 void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::string& drawStr, double sizeOfLineWrap, double textStartXPos, double textStartYPos)
@@ -219,12 +177,68 @@ void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::strin
 	}
 }
 
+void drawText(std::string& text, double sizeOfLineWrap, double textStartXPos, double textStartYPos)
+{
+	const std::regex regexPattern("(\\[(c_|/)[a-zA-Z]+?\\])|(\n)");
+	int lastPos = 0;
+	double curTextXOffset = 0;
+	double curTextYOffset = 0;
+	for (std::sregex_iterator it = std::sregex_iterator(text.begin(), text.end(), regexPattern); it != std::sregex_iterator(); it++)
+	{
+		std::smatch match = *it;
+		int pos = static_cast<int>(match.position(0));
+		std::string drawStr = text.substr(lastPos, pos - lastPos);
+		drawWrappingText(curTextXOffset, curTextYOffset, drawStr, sizeOfLineWrap, textStartXPos, textStartYPos);
+		if (text[pos] == '\n')
+		{
+			curTextXOffset = 0;
+			curTextYOffset += 10;
+		}
+		else if (text[pos + 2] == '_')
+		{
+			// Assume this is color
+			RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
+			RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
+			if (curColor.m_Kind != VALUE_UNDEFINED)
+			{
+				g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
+			}
+		}
+		else if (text[pos + 1] == '/')
+		{
+			// Assume this is end color
+			g_ModuleInterface->CallBuiltin("draw_set_colour", { static_cast<double>(0xFFFFFF) });
+		}
+		lastPos = static_cast<int>(pos + match.length());
+	}
+	if (lastPos < text.size())
+	{
+		std::string drawStr = text.substr(lastPos);
+		drawWrappingText(curTextXOffset, curTextYOffset, drawStr, sizeOfLineWrap, textStartXPos, textStartYPos);
+	}
+}
+
+RValue& DrawTextScribbleBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
+{
+	if (curLanguagePackFont != -1)
+	{
+		RValue curFont = languageFontList[curLanguagePackFont];
+		std::string text = getTextSwapMapping(Args);
+		if (curFont.m_Kind == VALUE_UNDEFINED)
+		{
+			return ReturnValue;
+		}
+		
+		drawText(text, 1e10, Args[0]->m_Real, Args[1]->m_Real);
+		callbackManagerInterfacePtr->CancelOriginalFunction();
+	}
+	return ReturnValue;
+}
+
 RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
 {
 	if (curLanguagePackFont != -1)
 	{
-		double textStartXPos = Args[0]->m_Real;
-		double textStartYPos = Args[1]->m_Real;
 		RValue curFont = languageFontList[curLanguagePackFont];
 		std::string text = getTextSwapMapping(Args);
 		if (curFont.m_Kind == VALUE_UNDEFINED)
@@ -239,38 +253,7 @@ RValue& DrawTextScribbleExtBefore(CInstance* Self, CInstance* Other, RValue& Ret
 			g_ModuleInterface->CallBuiltin("draw_set_alpha", { *Args[6] });
 		}
 
-		const std::regex regexPattern("\\[(c_|/)[a-zA-Z]+?\\]");
-		int lastPos = 0;
-		double curTextXOffset = 0;
-		double curTextYOffset = 0;
-		for (std::sregex_iterator it = std::sregex_iterator(text.begin(), text.end(), regexPattern); it != std::sregex_iterator(); it++)
-		{
-			std::smatch match = *it;
-			int pos = static_cast<int>(match.position(0));
-			std::string drawStr = text.substr(lastPos, pos - lastPos);
-			drawWrappingText(curTextXOffset, curTextYOffset, drawStr, sizeOfLineWrap, textStartXPos, textStartYPos);
-			if (text[pos + 2] == '_')
-			{
-				// Assume this is color
-				RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
-				RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
-				if (curColor.m_Kind != VALUE_UNDEFINED)
-				{
-					g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
-				}
-			}
-			else if (text[pos + 1] == '/')
-			{
-				// Assume this is end color
-				g_ModuleInterface->CallBuiltin("draw_set_colour", { static_cast<double>(0xFFFFFF) });
-			}
-			lastPos = static_cast<int>(pos + match.length());
-		}
-		if (lastPos < text.size())
-		{
-			std::string drawStr = text.substr(lastPos);
-			drawWrappingText(curTextXOffset, curTextYOffset, drawStr, sizeOfLineWrap, textStartXPos, textStartYPos);
-		}
+		drawText(text, sizeOfLineWrap, Args[0]->m_Real, Args[1]->m_Real);
 		callbackManagerInterfacePtr->CancelOriginalFunction();
 	}
 	return ReturnValue;

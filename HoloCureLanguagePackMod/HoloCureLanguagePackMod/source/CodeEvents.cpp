@@ -5,6 +5,8 @@
 #include <fstream>
 #include <regex>
 
+extern int curLanguagePackFont;
+
 std::vector<std::string> languageNamesList;
 std::vector<RValue> languageFontList;
 std::vector<std::unordered_map<std::string, std::string>> languageTextSwapMap;
@@ -294,10 +296,41 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 		}
 	}
 
+	std::ifstream inFile;
+	inFile.open("LanguagePacks/SavedLanguage");
+	std::string line;
+	if (std::getline(inFile, line))
+	{
+		if (!line.empty())
+		{
+			int namePos = -1;
+			for (int i = 0; i < languageNamesList.size(); i++)
+			{
+				if (languageNamesList[i].compare(line) == 0)
+				{
+					namePos = i;
+				}
+			}
+			if (namePos != -1)
+			{
+				RValue textController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
+				RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { textController, "SetLanguage" });
+				curLanguagePackFont = namePos;
+				g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", line });
+			}
+			else
+			{
+				g_ModuleInterface->Print(CM_RED, "Couldn't find language pack saved in LanguagePacks/SavedLanguage");
+			}
+		}
+	}
+
 	RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "SetLanguage" });
 	RValue CurrentLanguage = g_ModuleInterface->CallBuiltin("variable_global_get", { "CurrentLanguage" });
-	RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { RValue(1.0), CurrentLanguage });
+	RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { 1, CurrentLanguage });
 	g_ModuleInterface->CallBuiltin("method_call", { SetLanguageMethod, SetLanguageMethodArr });
+	RValue returnVal;
+	origFoodRecipesScript(Self, nullptr, returnVal, 0, nullptr);
 
 	if (!std::filesystem::exists("LanguagePacks/TextContainer.out"))
 	{
