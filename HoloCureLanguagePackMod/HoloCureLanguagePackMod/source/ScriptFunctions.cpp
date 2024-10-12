@@ -144,6 +144,7 @@ std::string getTextSwapMapping(RValue** Args)
 
 void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::string& drawStr, double sizeOfLineWrap, double textStartXPos, double textStartYPos)
 {
+	// TODO: Fix text not taking into account the alignment
 	double drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr }).m_Real;
 	while (curTextXOffset + drawnTextSize >= sizeOfLineWrap)
 	{

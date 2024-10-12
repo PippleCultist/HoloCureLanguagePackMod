@@ -9,8 +9,6 @@
 using namespace Aurie;
 using namespace YYTK;
 
-#define MODNAME "Holocure Language Pack Mod"
-
 CallbackManagerInterface* callbackManagerInterfacePtr = nullptr;
 YYRunnerInterface g_RunnerInterface;
 YYTKInterface* g_ModuleInterface = nullptr;
@@ -48,6 +46,8 @@ EXPORTED AurieStatus ModuleInitialize(
 		printf("Failed to get YYTK Interface\n");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
+
+	callbackManagerInterfacePtr->LogToFile(MODNAME, "Starting hooks");
 
 	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SaveSettings", SaveSettingsBefore, SaveSettingsAfter, nullptr)))
 	{
@@ -125,6 +125,12 @@ EXPORTED AurieStatus ModuleInitialize(
 	
 	objTextControllerIndex = static_cast<int>(g_ModuleInterface->CallBuiltin("asset_get_index", { "obj_TextController" }).AsReal());
 	jpFont = static_cast<int>(g_ModuleInterface->CallBuiltin("asset_get_index", { "jpFont" }).AsReal());
+	int initRoom = static_cast<int>(g_ModuleInterface->CallBuiltin("asset_get_index", { "rm_InitRoom" }).AsReal());
+
+	// Kind of hacky way to get the intro text to work with the translation as well
+	g_ModuleInterface->CallBuiltin("room_goto", { initRoom });
+
+	callbackManagerInterfacePtr->LogToFile(MODNAME, "Finished Initialization");
 
 	return AURIE_SUCCESS;
 }
