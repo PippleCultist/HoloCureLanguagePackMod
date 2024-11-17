@@ -55,19 +55,19 @@ EXPORTED AurieStatus ModuleInitialize(
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
 
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SelectRight_gml_Object_obj_Options_Create_0", SelectRightOptionsCreateFuncBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SelectRight@gml_Object_obj_Options_Create_0", SelectRightOptionsCreateFuncBefore, nullptr, nullptr)))
 	{
-		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SelectRight_gml_Object_obj_Options_Create_0");
+		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SelectRight@gml_Object_obj_Options_Create_0");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SelectLeft_gml_Object_obj_Options_Create_0", SelectLeftOptionsCreateFuncBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_SelectLeft@gml_Object_obj_Options_Create_0", SelectLeftOptionsCreateFuncBefore, nullptr, nullptr)))
 	{
-		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SelectLeft_gml_Object_obj_Options_Create_0");
+		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_SelectLeft@gml_Object_obj_Options_Create_0");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_Confirmed_gml_Object_obj_Options_Create_0", ConfirmedOptionsCreateFuncBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_Confirmed@gml_Object_obj_Options_Create_0", ConfirmedOptionsCreateFuncBefore, nullptr, nullptr)))
 	{
-		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_Confirmed_gml_Object_obj_Options_Create_0");
+		g_ModuleInterface->Print(CM_RED, "Failed to register callback for %s", "gml_Script_Confirmed@gml_Object_obj_Options_Create_0");
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 	}
 	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterScriptFunctionCallback(MODNAME, "gml_Script_draw_text_scribble", DrawTextScribbleBefore, nullptr, nullptr)))
