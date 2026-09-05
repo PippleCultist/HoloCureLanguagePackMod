@@ -1,16 +1,20 @@
 # Holocure Language Pack Mod
 A Holocure mod that allows for language packs to be used within the game. This also allows for importing .ttf files to support any language.
 ## Installation Steps
+# Follow these instructions if you've used mods before December 2025
+- Run `AurieManager.exe` and uninstall Aurie from `HoloCure.exe`
+    - The latest version of Aurie is moving away from AurieManager and is instead patching the game to run the mods. This has the benefit of not requiring admin privileges anymore and easily disabling mods by deleting the mods folder or replacing the original exe without crashing.
+# Normal installation steps
 - Download `HoloCureLanguagePackMod.dll` and `CallbackManagerMod.dll` from the latest version of the mod https://github.com/PippleCultist/HoloCureLanguagePackMod/releases
-- Download `AurieInstaller.exe`, `AurieLoader.exe`, and `AurieCore.dll` from the latest version of Aurie https://github.com/AurieFramework/Aurie/releases
-    - Note: This launcher may be marked as a Trojan by your antivirus. YYToolkit is opensource and has been used in several modding communities without issues.
-- Download `YYToolkit.dll` from the latest version of YYToolkit https://github.com/AurieFramework/YYToolkit/releases
-- Launch `AurieInstaller.exe`, click `Install Aurie Framework`, and select `HoloCure.exe`
+- Download `AurieInstaller.exe` from the latest version of Aurie https://github.com/AurieFramework/Aurie/releases
+- Launch `AurieInstaller.exe`, click `Find my game!`, and select `HoloCure.exe`
     - You can find `HoloCure.exe` through Steam by clicking `Browse local files`
-- Copy `CallbackManagerMod.dll`, `HoloCureLanguagePackMod.dll`, and `YYToolkit.dll` to `mods/Aurie`
-- Copy `AurieCore.dll` to `mods/Native`
-- Copy `AurieLoader.exe` to `mods`
+- Click `Confirm Version`
+- Go to the `mods` folder where `HoloCure.exe` is located and locate the `Aurie` folder.
+    - In the `Aurie` folder, copy over `HoloCureLanguagePackMod.dll` and `CallbackManagerMod.dll`
 - Running the game either using the executable or through Steam should now launch the mods as well
+## Common Issues
+- If you deleted the mods folder and are seeing `Missing game executable`, you most likely didn't click `Uninstall Aurie` in AurieManager before deleting the folder. To fix this issue, uninstall Aurie through AurieManager.
 ## Adding a language pack
 After launching the game with the mod installed, it should create a folder called `LanguagePacks` in the same folder as `HoloCure.exe`. Put the language pack and corresponding ttf file in that folder.
 ## Creating a language pack
