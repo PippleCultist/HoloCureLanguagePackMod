@@ -1,5 +1,5 @@
 #include "ScriptFunctions.h"
-#include <YYToolkit/shared.hpp>
+#include <YYToolkit/YYTK_Shared.hpp>
 #include <CallbackManager/CallbackManagerInterface.h>
 #include "ModuleMain.h"
 #include "CodeEvents.h"
@@ -16,7 +16,7 @@ RValue& SelectRightOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RV
 	RValue controllerMenu = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "controllerMenu" });
 	RValue changingName = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "changingName" });
 	RValue deleteConfirm = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "deleteConfirm" });
-	if (!keybindMenu.AsBool() && !controllerMenu.AsBool() && !changingName.AsBool() && !deleteConfirm.AsBool())
+	if (!keybindMenu.ToBoolean() && !controllerMenu.ToBoolean() && !changingName.ToBoolean() && !deleteConfirm.ToBoolean())
 	{
 		int optionPage = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "optionPage" }).m_Real));
 		if (optionPage == 0)
@@ -50,7 +50,7 @@ RValue& SelectLeftOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVa
 	RValue controllerMenu = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "controllerMenu" });
 	RValue changingName = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "changingName" });
 	RValue deleteConfirm = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "deleteConfirm" });
-	if (!keybindMenu.AsBool() && !controllerMenu.AsBool() && !changingName.AsBool() && !deleteConfirm.AsBool())
+	if (!keybindMenu.ToBoolean() && !controllerMenu.ToBoolean() && !changingName.ToBoolean() && !deleteConfirm.ToBoolean())
 	{
 		int optionPage = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "optionPage" }).m_Real));
 		if (optionPage == 0)
@@ -80,11 +80,11 @@ RValue& SelectLeftOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVa
 RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RValue& ReturnValue, int numArgs, RValue** Args)
 {
 	RValue canControl = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "canControl" });
-	if (canControl.AsBool())
+	if (canControl.ToBoolean())
 	{
 		RValue keybindMenu = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "keybindMenu" });
 		RValue controllerMenu = g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "controllerMenu" });
-		if (!keybindMenu.AsBool() && !controllerMenu.AsBool())
+		if (!keybindMenu.ToBoolean() && !controllerMenu.ToBoolean())
 		{
 			int optionPage = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("variable_instance_get", { Self, "optionPage" }).m_Real));
 			if (optionPage == 0)
@@ -104,7 +104,7 @@ RValue& ConfirmedOptionsCreateFuncBefore(CInstance* Self, CInstance* Other, RVal
 						RValue textController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
 						RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { textController, "SetLanguage" });
 						curLanguagePackFont = static_cast<int>(selectedLanguageOption - languageOptionsLen + languageNamesList.size());
-						RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { 1, languageNamesList[curLanguagePackFont] });
+						RValue SetLanguageMethodArr = g_ModuleInterface->CallBuiltin("array_create", { 1, languageNamesList[curLanguagePackFont].c_str() });
 						g_ModuleInterface->CallBuiltin("method_call", { SetLanguageMethod, SetLanguageMethodArr });
 						outFile << languageNamesList[curLanguagePackFont];
 						RValue returnVal;
@@ -127,16 +127,16 @@ std::string getTextSwapMapping(RValue** Args)
 {
 	if (Args[2]->m_Kind != VALUE_STRING) // Seems like the argument could be a non string? Probably converts it under the hood to a string
 	{
-		return std::string(Args[2]->AsString());
+		return Args[2]->ToString();
 	}
-	std::string text = std::string(Args[2]->AsString());
+	std::string text = Args[2]->ToString();
 	if (curLanguagePackFont != -1)
 	{
 		auto findMapping = languageTextSwapMap[curLanguagePackFont].find(text);
 		if (findMapping != languageTextSwapMap[curLanguagePackFont].end())
 		{
 			text = findMapping->second;
-			*Args[2] = text;
+			*Args[2] = text.c_str();
 		}
 	}
 	return text;
@@ -145,7 +145,7 @@ std::string getTextSwapMapping(RValue** Args)
 void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::string& drawStr, double sizeOfLineWrap, double textStartXPos, double textStartYPos)
 {
 	// TODO: Fix text not taking into account the alignment
-	double drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr }).m_Real;
+	double drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.c_str() }).ToDouble();
 	while (curTextXOffset + drawnTextSize >= sizeOfLineWrap)
 	{
 		int low = 1;
@@ -155,7 +155,7 @@ void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::strin
 		{
 			int mid = (high + low) / 2;
 			numCharDrawn = mid;
-			double curDrawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.substr(0, numCharDrawn) }).m_Real;
+			double curDrawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.substr(0, numCharDrawn).c_str() }).ToDouble();
 			if (curTextXOffset + curDrawnTextSize > sizeOfLineWrap)
 			{
 				high = mid - 1;
@@ -165,15 +165,15 @@ void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::strin
 				low = mid + 1;
 			}
 		}
-		g_ModuleInterface->CallBuiltin("draw_text", { textStartXPos + curTextXOffset, textStartYPos + curTextYOffset, drawStr.substr(0, numCharDrawn) });
+		g_ModuleInterface->CallBuiltin("draw_text", { textStartXPos + curTextXOffset, textStartYPos + curTextYOffset, drawStr.substr(0, numCharDrawn).c_str() });
 		drawStr = drawStr.substr(numCharDrawn);
 		curTextXOffset = 0;
 		curTextYOffset += 10;
-		drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr }).m_Real;
+		drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.capacity() }).ToDouble();
 	}
 	if (drawnTextSize != 0)
 	{
-		g_ModuleInterface->CallBuiltin("draw_text", { textStartXPos + curTextXOffset, textStartYPos + curTextYOffset, drawStr });
+		g_ModuleInterface->CallBuiltin("draw_text", { textStartXPos + curTextXOffset, textStartYPos + curTextYOffset, drawStr.c_str() });
 		curTextXOffset += drawnTextSize;
 	}
 }
@@ -199,7 +199,7 @@ void drawText(std::string& text, double sizeOfLineWrap, double textStartXPos, do
 		{
 			// Assume this is color
 			RValue scribbleColours = g_ModuleInterface->CallBuiltin("variable_global_get", { "__scribble_colours" });
-			RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2) });
+			RValue curColor = g_ModuleInterface->CallBuiltin("variable_instance_get", { scribbleColours, text.substr(pos + 1, match.length() - 2).c_str() });
 			if (curColor.m_Kind != VALUE_UNDEFINED)
 			{
 				g_ModuleInterface->CallBuiltin("draw_set_colour", { curColor });
@@ -292,7 +292,7 @@ RValue& SaveSettingsAfter(CInstance* Self, CInstance* Other, RValue& ReturnValue
 {
 	if (curLanguagePackFont != -1)
 	{
-		g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageNamesList[curLanguagePackFont] });
+		g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageNamesList[curLanguagePackFont].c_str() });
 	}
 	return ReturnValue;
 }

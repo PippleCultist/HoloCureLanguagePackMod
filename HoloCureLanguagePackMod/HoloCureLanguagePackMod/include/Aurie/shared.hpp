@@ -40,7 +40,7 @@
 #endif
 
 #ifndef AURIE_FWK_MAJOR
-#define AURIE_FWK_MAJOR 1
+#define AURIE_FWK_MAJOR 2
 #endif // AURIE_FWK_MAJOR
 
 #ifndef AURIE_FWK_MINOR
@@ -61,6 +61,9 @@ namespace Aurie
 	struct AurieList;
 	struct AurieObject;
 	struct AurieMemoryAllocation;
+	struct AurieInlineHook;
+	struct AurieMidHook;
+	struct AurieRpHook;
 	struct AurieHook;
 
 	// Forward declarations (not opaque)
@@ -98,7 +101,13 @@ namespace Aurie
 		// The target file header, directory, or RVA could not be found or is invalid.
 		AURIE_FILE_PART_NOT_FOUND,
 		// The object was not found.
-		AURIE_OBJECT_NOT_FOUND
+		AURIE_OBJECT_NOT_FOUND,
+		// The requested resource is unavailable.
+		AURIE_UNAVAILABLE,
+		// The verification failed.
+		AURIE_VERIFICATION_FAILURE,
+		// A generic error has occurred.
+		AURIE_UNKNOWN_ERROR
 	};
 
 	enum AurieObjectType : uint32_t
@@ -110,7 +119,11 @@ namespace Aurie
 		// An AurieMemoryAllocation object
 		AURIE_OBJECT_ALLOCATION = 3,
 		// An AurieHook object
-		AURIE_OBJECT_HOOK = 4
+		AURIE_OBJECT_HOOK = 4,
+		// An AurieHook object
+		AURIE_OBJECT_MIDFUNCTION_HOOK = 5,
+		// An AurieHook object
+		AURIE_OBJECT_RP_HOOK = 6,
 	};
 
 	enum AurieModuleOperationType : uint32_t
@@ -121,12 +134,155 @@ namespace Aurie
 		// The call is a ModuleInitialize call
 		AURIE_OPERATION_INITIALIZE = 2,
 		// The call is a ModuleUnload call
-		AURIE_OPERATION_UNLOAD = 3
+		AURIE_OPERATION_UNLOAD = 3,
+		// The call is a ModuleEntrypoint call
+		AURIE_OPERATION_ENTRYPOINT = 4
 	};
+
+	union XmmRegister {
+		uint8_t UInt8[16];
+		uint16_t UInt16[8];
+		uint32_t UInt32[4];
+		uint64_t UInt64[2];
+		float FP32[4];
+		double FP64[2];
+	};
+
+	struct SSEContext32
+	{
+		XmmRegister Xmm0;
+		XmmRegister Xmm1;
+		XmmRegister Xmm2;
+		XmmRegister Xmm3;
+		XmmRegister Xmm4;
+		XmmRegister Xmm5;
+		XmmRegister Xmm6;
+		XmmRegister Xmm7;
+	};
+
+	struct SSEContext64
+	{
+		XmmRegister Xmm0;
+		XmmRegister Xmm1;
+		XmmRegister Xmm2;
+		XmmRegister Xmm3;
+		XmmRegister Xmm4;
+		XmmRegister Xmm5;
+		XmmRegister Xmm6;
+		XmmRegister Xmm7;
+		XmmRegister Xmm8;
+		XmmRegister Xmm9;
+		XmmRegister Xmm10;
+		XmmRegister Xmm11;
+		XmmRegister Xmm12;
+		XmmRegister Xmm13;
+		XmmRegister Xmm14;
+		XmmRegister Xmm15;
+	};
+
+	// In a hook: 
+	// - RIP points to a trampoline containing the replaced instructions.
+	// - RSP is read-only, modifications to it are ignored.
+	// - The top of TrampolineRSP contains the resume address.
+	// - TrampolineRSP can be modified so long as the previous requirement is met.
+	struct ProcessorContext64
+	{
+		SSEContext64 SSE;
+		uint64_t RFlags;
+		uint64_t R15;
+		uint64_t R14;
+		uint64_t R13;
+		uint64_t R12;
+		uint64_t R11;
+		uint64_t R10;
+		uint64_t R9;
+		uint64_t R8;
+		uint64_t RDI;
+		uint64_t RSI;
+		uint64_t RDX;
+		uint64_t RCX;
+		uint64_t RBX;
+		uint64_t RAX;
+		uint64_t RBP;
+		uint64_t RSP;
+		uint64_t TrampolineRSP;
+		uint64_t RIP;
+	};
+
+	// In a hook: 
+	// - EIP points to a trampoline containing the replaced instructions.
+	// - ESP is read-only, modifications to it are ignored.
+	// - The top of TrampolineESP contains the resume address.
+	// - TrampolineESP can be modified so long as the previous requirement is met.
+	struct ProcessorContext32 {
+		SSEContext32 SSE;
+		uint32_t EFlags;
+		uint32_t EDI;
+		uint32_t ESI;
+		uint32_t EDX;
+		uint32_t ECX;
+		uint32_t EBX;
+		uint32_t EAX;
+		uint32_t EBP;
+		uint32_t ESP;
+		uint32_t TrampolineESP;
+		uint32_t EIP;
+	};
+
+#ifdef _WIN64
+	using ProcessorContext = ProcessorContext64;
+#else
+	using ProcessorContext = ProcessorContext32;
+#endif // _WIN32
 
 	constexpr inline bool AurieSuccess(const AurieStatus Status) noexcept
 	{
 		return Status == AURIE_SUCCESS;
+	}
+
+	constexpr inline const char* AurieStatusToString(const AurieStatus Status) noexcept
+	{
+		switch (Status)
+		{
+		case AURIE_SUCCESS:
+			return "AURIE_SUCCESS";
+		case AURIE_INVALID_ARCH:
+			return "AURIE_INVALID_ARCH";
+		case AURIE_EXTERNAL_ERROR:
+			return "AURIE_EXTERNAL_ERROR";
+		case AURIE_FILE_NOT_FOUND:
+			return "AURIE_FILE_NOT_FOUND";
+		case AURIE_ACCESS_DENIED:
+			return "AURIE_ACCESS_DENIED";
+		case AURIE_OBJECT_ALREADY_EXISTS:
+			return "AURIE_OBJECT_ALREADY_EXISTS";
+		case AURIE_INVALID_PARAMETER:
+			return "AURIE_INVALID_PARAMETER";
+		case AURIE_INSUFFICIENT_MEMORY:
+			return "AURIE_INSUFFICIENT_MEMORY";
+		case AURIE_INVALID_SIGNATURE:
+			return "AURIE_INVALID_SIGNATURE";
+		case AURIE_NOT_IMPLEMENTED:
+			return "AURIE_NOT_IMPLEMENTED";
+		case AURIE_MODULE_INTERNAL_ERROR:
+			return "AURIE_MODULE_INTERNAL_ERROR";
+		case AURIE_MODULE_DEPENDENCY_NOT_RESOLVED:
+			return "AURIE_MODULE_DEPENDENCY_NOT_RESOLVED";
+		case AURIE_MODULE_INITIALIZATION_FAILED:
+			return "AURIE_MODULE_INITIALIZATION_FAILED";
+		case AURIE_FILE_PART_NOT_FOUND:
+			return "AURIE_FILE_PART_NOT_FOUND";
+		case AURIE_OBJECT_NOT_FOUND:
+			return "AURIE_OBJECT_NOT_FOUND";
+		case AURIE_UNAVAILABLE:
+			return "AURIE_UNAVAILABLE";
+		case AURIE_VERIFICATION_FAILURE:
+			return "AURIE_VERIFICATION_FAILURE";
+		case AURIE_UNKNOWN_ERROR:
+			return "AURIE_UNKNOWN_ERROR";
+		}
+
+		return "AURIE_UNKNOWN_STATUS_CODE";
 	}
 
 	// All interfaces must inherit from the following class
@@ -143,6 +299,31 @@ namespace Aurie
 			OUT short& Minor,
 			OUT short& Patch
 		) = 0;
+	};
+
+	struct AurieOperationInfo
+	{
+		union
+		{
+			uint8_t Flags;
+			struct
+			{
+				bool IsFutureCall : 1;
+				bool Reserved : 7;
+			};
+		};
+
+		PVOID ModuleBaseAddress;
+	};
+
+	enum AurieLogSeverity : char
+	{
+		LOG_SEVERITY_TRACE = 0,
+		LOG_SEVERITY_DEBUG = 1,
+		LOG_SEVERITY_INFO = 2,
+		LOG_SEVERITY_WARNING = 3,
+		LOG_SEVERITY_ERROR = 4,
+		LOG_SEVERITY_CRITICAL = 5
 	};
 
 	// Always points to the initial Aurie image
@@ -163,15 +344,26 @@ namespace Aurie
 		);
 
 	using AurieModuleCallback = void(*)(
-		IN const AurieModule* const AffectedModule,
-		IN const AurieModuleOperationType OperationType,
-		IN const bool IsFutureCall
+		IN AurieModule* AffectedModule,
+		IN AurieModuleOperationType OperationType,
+		OPTIONAL IN OUT AurieOperationInfo* OperationInfo
 		);
+
+#if _WIN64
+	using AurieMidHookFunction = void(*)(
+		IN ProcessorContext64& Context
+		);
+#else
+	using AurieMidHookFunction = void(*)(
+		IN ProcessorContext32& Context
+		);
+#endif // _WIN64
 }
 
 #ifndef AURIE_INCLUDE_PRIVATE
 #include <functional>
 #include <Windows.h>
+#include <map>
 
 namespace Aurie
 {
@@ -186,6 +378,8 @@ namespace Aurie
 			IN const char* ImageExportName
 			);
 
+		inline std::map<std::string, void*> g_FunctionMap;
+
 		EXPORTED inline int WINAPI DllMain(
 			HINSTANCE,  // handle to DLL module
 			DWORD,		// reason for calling function
@@ -193,6 +387,15 @@ namespace Aurie
 		)
 		{
 			return TRUE;
+		}
+
+		EXPORTED inline bool __AurieIsDebugBuild()
+		{
+#ifdef NDEBUG
+			return false;
+#else
+			return true;
+#endif
 		}
 
 		EXPORTED inline AurieStatus __AurieFrameworkInit(
@@ -227,7 +430,11 @@ namespace Aurie
 			template <typename ...TArgs>
 			ReturnType operator()(const char* FunctionName, TArgs&... Args)
 			{
-				auto Func = reinterpret_cast<TFunction*>(g_PpGetFrameworkRoutine(FunctionName));
+				TFunction* Func = nullptr;
+				if (g_FunctionMap.contains(FunctionName))
+					return reinterpret_cast<TFunction*>(g_FunctionMap[FunctionName])(Args...);
+
+				Func = reinterpret_cast<TFunction*>(g_PpGetFrameworkRoutine(FunctionName));
 				if (!Func)
 				{
 					std::string error_string = "Tried to call function ";
@@ -239,12 +446,17 @@ namespace Aurie
 					exit(0);
 				}
 
+				g_FunctionMap[FunctionName] = Func;
 				return Func(Args...);
 			}
 
 			ReturnType operator()(const char* FunctionName)
 			{
-				auto Func = reinterpret_cast<TFunction*>(g_PpGetFrameworkRoutine(FunctionName));
+				TFunction* Func = nullptr;
+				if (g_FunctionMap.contains(FunctionName))
+					return reinterpret_cast<TFunction*>(g_FunctionMap[FunctionName])();
+
+				Func = reinterpret_cast<TFunction*>(g_PpGetFrameworkRoutine(FunctionName));
 				if (!Func)
 				{
 					std::string error_string = "Tried to call function ";
@@ -256,6 +468,7 @@ namespace Aurie
 					exit(0);
 				}
 
+				g_FunctionMap[FunctionName] = Func;
 				return Func();
 			}
 		};
@@ -266,6 +479,57 @@ namespace Aurie
 
 namespace Aurie
 {
+	inline void vDbgPrint(
+		IN const char* Format,
+		IN va_list Arguments
+	)
+	{
+		return AURIE_API_CALL(vDbgPrint, Format, Arguments);
+	}
+
+	inline void DbgPrint(
+		IN const char* Format,
+		IN ...
+	)
+	{
+		va_list list;
+		va_start(list, Format);
+
+		vDbgPrint(
+			Format,
+			list
+		);
+
+		va_end(list);
+	}
+
+	inline void vDbgPrintEx(
+		IN AurieLogSeverity Severity,
+		IN const char* Format,
+		IN va_list Arguments
+	)
+	{
+		return AURIE_API_CALL(vDbgPrintEx, Severity, Format, Arguments);
+	}
+
+	inline void DbgPrintEx(
+		IN AurieLogSeverity Severity,
+		IN const char* Format,
+		IN ...
+	)
+	{
+		va_list list;
+		va_start(list, Format);
+
+		vDbgPrintEx(
+			Severity,
+			Format,
+			list
+		);
+
+		va_end(list);
+	}
+
 	inline AurieStatus ElIsProcessSuspended(
 		OUT bool& Suspended
 	)
@@ -342,6 +606,43 @@ namespace Aurie
 		return AURIE_API_CALL(MmCreateHook, Module, HookIdentifier, SourceFunction, DestinationFunction, Trampoline);
 	}
 
+	inline AurieStatus MmEnableHook(
+		IN AurieModule* Module,
+		IN std::string_view HookIdentifier
+	)
+	{
+		return AURIE_API_CALL(MmEnableHook, Module, HookIdentifier);
+	}
+
+	inline AurieStatus MmDisableHook(
+		IN AurieModule* Module,
+		IN std::string_view HookIdentifier
+	)
+	{
+		return AURIE_API_CALL(MmDisableHook, Module, HookIdentifier);
+	}
+
+	inline AurieStatus MmCreateUnsafeHook(
+		IN AurieModule* Module,
+		IN std::string_view HookIdentifier,
+		IN PVOID SourceFunction,
+		IN PVOID DestinationFunction,
+		OUT OPTIONAL PVOID* Trampoline
+	)
+	{
+		return AURIE_API_CALL(MmCreateUnsafeHook, Module, HookIdentifier, SourceFunction, DestinationFunction, Trampoline);
+	}
+
+	inline AurieStatus MmCreateMidfunctionHook(
+		IN AurieModule* Module,
+		IN std::string_view HookIdentifier,
+		IN PVOID SourceAddress,
+		IN AurieMidHookFunction TargetHandler
+	)
+	{
+		return AURIE_API_CALL(MmCreateMidfunctionHook, Module, HookIdentifier, SourceAddress, TargetHandler);
+	}
+
 	inline AurieStatus MmHookExists(
 		IN AurieModule* Module,
 		IN std::string_view HookIdentifier
@@ -364,6 +665,15 @@ namespace Aurie
 	)
 	{
 		return AURIE_API_CALL(MmRemoveHook, Module, HookIdentifier);
+	}
+
+	inline AurieStatus MmGetRegistersForHook(
+		IN AurieModule* Module,
+		IN std::string_view HookIdentifier,
+		OUT ProcessorContext& Context
+	)
+	{
+		return AURIE_API_CALL(MmGetRegistersForHook, Module, HookIdentifier, Context);
 	}
 
 	namespace Internal
@@ -409,6 +719,14 @@ namespace Aurie
 	{
 		return AURIE_API_CALL(MdIsImageInitialized, Module);
 	}
+
+	inline bool MdIsImageRuntimeLoaded(
+		IN AurieModule* Module
+	)
+	{
+		return AURIE_API_CALL(MdIsImageRuntimeLoaded, Module);
+	}
+
 
 	inline AurieStatus MdMapFolder(
 		IN const fs::path& FolderPath,
@@ -531,6 +849,15 @@ namespace Aurie
 		)
 		{
 			return AURIE_API_CALL(ObpGetObjectType, Object);
+		}
+
+		inline AurieStatus ObpLookupInterfaceOwnerExport(
+			IN const char* InterfaceName,
+			IN const char* ExportName,
+			OUT PVOID& ExportAddress
+		)
+		{
+			return AURIE_API_CALL(ObpLookupInterfaceOwnerExport, InterfaceName, ExportName, ExportAddress);
 		}
 	}
 

@@ -1,9 +1,9 @@
 #pragma once
-#include <YYToolkit/shared.hpp>
+#include <YYToolkit/YYTK_Shared.hpp>
 #include <CallbackManager/CallbackManagerInterface.h>
 #include <iostream>
 
-#define VERSION_NUM "v1.0.8"
+#define VERSION_NUM "v1.1.0"
 #define MODNAME "Holocure Language Pack Mod " VERSION_NUM 
 
 extern CallbackManagerInterface* callbackManagerInterfacePtr;
@@ -16,3 +16,10 @@ extern PFUNC_YYGMLScript origFoodRecipesScript;
 
 extern int objTextControllerIndex;
 extern int jpFont;
+
+template<typename... Args>
+void LogPrint(AurieLogSeverity severity, const char* LogFormat, Args... args)
+{
+	callbackManagerInterfacePtr->LogToFile(MODNAME, LogFormat, args...);
+	DbgPrintEx(severity, LogFormat, args...);
+}

@@ -1,6 +1,6 @@
 #include "BuiltinFunctions.h"
 #include "ModuleMain.h"
-#include <YYToolkit/shared.hpp>
+#include <YYToolkit/YYTK_Shared.hpp>
 #include "CallbackManager/CallbackManagerInterface.h"
 #include "ScriptFunctions.h"
 #include "CodeEvents.h"
@@ -13,20 +13,20 @@ std::string getTextSwapMapping(RValue* Args)
 	{
 		return "";
 	}
-	std::string text = std::string(Args[2].AsString());
+	std::string text = Args[2].ToString();
 	if (curLanguagePackFont != -1)
 	{
 		auto findMapping = languageTextSwapMap[curLanguagePackFont].find(text);
 		if (findMapping != languageTextSwapMap[curLanguagePackFont].end())
 		{
 			text = findMapping->second;
-			Args[2] = text;
+			Args[2] = text.c_str();
 		}
 	}
 	return text;
 }
 
-void DrawTextBefore(RValue* Result, CInstance* Self, CInstance* Other, int numArgs, RValue* Args)
+void DrawTextBefore(RValue& Result, CInstance* Self, CInstance* Other, int numArgs, RValue* Args)
 {
 	if (curLanguagePackFont != -1)
 	{

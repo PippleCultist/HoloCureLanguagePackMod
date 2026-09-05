@@ -1,6 +1,6 @@
 #include "CodeEvents.h"
 #include "ModuleMain.h"
-#include <YYToolkit/shared.hpp>
+#include <YYToolkit/YYTK_Shared.hpp>
 #include "CallbackManager/CallbackManagerInterface.h"
 #include <fstream>
 #include <regex>
@@ -84,24 +84,24 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					}
 					if (!line.contains(".ttf"))
 					{
-						g_ModuleInterface->Print(CM_RED, "First line of language pack %s must be the ttf file name or NONE", newLangName);
+						LogPrint(LOG_SEVERITY_ERROR, "First line of language pack %s must be the ttf file name or NONE", newLangName);
 						hasObtainedFont = false;
 						break;
 					}
 					if (!std::filesystem::exists(std::format("LanguagePacks/{}", line)))
 					{
-						g_ModuleInterface->Print(CM_RED, "Couldn't find the ttf file %s for %s. Make sure that it is in the LanguagePacks directory", line, newLangName);
+						LogPrint(LOG_SEVERITY_ERROR, "Couldn't find the ttf file %s for %s. Make sure that it is in the LanguagePacks directory", line, newLangName);
 						hasObtainedFont = false;
 						break;
 					}
 
 					std::string curFontName = std::format("keepAliveFont{}", line);
-					if (!g_ModuleInterface->CallBuiltin("variable_global_exists", { curFontName }).AsBool())
+					if (!g_ModuleInterface->CallBuiltin("variable_global_exists", { curFontName.c_str() }).ToBoolean())
 					{
-						RValue newFont = g_ModuleInterface->CallBuiltin("font_add", { std::format("LanguagePacks/{}", line), 9, true, false, 32, 65374 });
-						g_ModuleInterface->CallBuiltin("variable_global_set", { curFontName, newFont });
+						RValue newFont = g_ModuleInterface->CallBuiltin("font_add", { std::format("LanguagePacks/{}", line).c_str(), 9, true, false, 32, 65374});
+						g_ModuleInterface->CallBuiltin("variable_global_set", { curFontName.c_str(), newFont});
 					}
-					languageFontList.push_back(g_ModuleInterface->CallBuiltin("variable_global_get", { curFontName }));
+					languageFontList.push_back(g_ModuleInterface->CallBuiltin("variable_global_get", { curFontName.c_str() }));
 					lineCount++;
 					continue;
 				}
@@ -113,17 +113,17 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 					strReplaceAll(value, "\\n", "\n");
 					if (key[key.size() - 1] != '"')
 					{
-						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark for key)", lineCount, newLangName);
+						LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing ending quotation mark for key)", lineCount, newLangName);
 					}
 					else
 					{
 						if (value[0] != '"')
 						{
-							g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
+							LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
 						}
 						else if (value[value.size() - 1] != '"')
 						{
-							g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
+							LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
 						}
 						else
 						{
@@ -144,7 +144,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				{
 					if (value[value.size() - 1] != '"')
 					{
-						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
+						LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
 					}
 					else
 					{
@@ -155,7 +155,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				{
 					if (value[value.size() - 1] != ']')
 					{
-						g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
+						LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
 					}
 					else
 					{
@@ -173,7 +173,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 						{
 							if (mapping[0] != '"' || mapping[mapping.size() - 1] != '"')
 							{
-								g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
+								LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing ending quotation mark)", lineCount, newLangName);
 								isMalformatted = true;
 								break;
 							}
@@ -199,7 +199,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 									}
 									if (mapping[0] != '[' || mapping[mapping.size() - 1] != ']')
 									{
-										g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
+										LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (missing end array bracket)", lineCount, newLangName);
 										isMalformatted = true;
 										break;
 									}
@@ -229,7 +229,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				}
 				else
 				{
-					g_ModuleInterface->Print(CM_RED, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
+					LogPrint(LOG_SEVERITY_ERROR, "Line %d in language pack %s is malformatted (mapping isn't a string or array)", lineCount, newLangName);
 				}
 				lineCount++;
 			}
@@ -247,24 +247,24 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 			{
 				RValue curKey = textContainerKeyNames[i];
 				RValue curValue = g_ModuleInterface->CallBuiltin("variable_instance_get", { textContainer, curKey });
-				auto checkLangMapping = langMapping.find(std::string(curKey.AsString()));
+				auto checkLangMapping = langMapping.find(curKey.ToString());
 				if (checkLangMapping != langMapping.end())
 				{
 					// TODO: Should probably add a debug mode
-//					printf("Applying mapping for %s\n", curKey.AsString().data());
+//					printf("Applying mapping for %s\n", curKey.ToString().data());
 					languageMappingData curMapping = checkLangMapping->second;
 					if (curMapping.mappingType == 0)
 					{
-						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, curMapping.stringMapping });
+						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName.c_str(), curMapping.stringMapping.c_str()});
 					}
 					else if (curMapping.mappingType == 1)
 					{
 						RValue textArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayMapping.size()) });
 						for (int j = 0; j < curMapping.arrayMapping.size(); j++)
 						{
-							textArray[j] = curMapping.arrayMapping[j];
+							textArray[j] = curMapping.arrayMapping[j].c_str();
 						}
-						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, textArray });
+						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName.c_str(), textArray });
 					}
 					else if (curMapping.mappingType == 2)
 					{
@@ -273,24 +273,24 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 						{
 							if (curMapping.arrayOfArrayMapping[j].size() == 1) // Special exception if a string is put in the array rather than an array
 							{
-								textArray[j] = curMapping.arrayOfArrayMapping[j][0];
+								textArray[j] = curMapping.arrayOfArrayMapping[j][0].c_str();
 								continue;
 							}
 							RValue innerTextArray = g_ModuleInterface->CallBuiltin("array_create", { static_cast<double>(curMapping.arrayOfArrayMapping[j].size()) });
 							for (int k = 0; k < curMapping.arrayOfArrayMapping[j].size(); k++)
 							{
-								innerTextArray[k] = curMapping.arrayOfArrayMapping[j][k];
+								innerTextArray[k] = curMapping.arrayOfArrayMapping[j][k].c_str();
 							}
 							textArray[j] = innerTextArray;
 						}
-						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, textArray });
+						g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName.c_str(), textArray});
 					}
 				}
 				else
 				{
 					// Just copy the english result if it couldn't find a mapping
 					RValue engMapping = g_ModuleInterface->CallBuiltin("variable_instance_get", { curValue, "eng" });
-					g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName, engMapping });
+					g_ModuleInterface->CallBuiltin("variable_instance_set", { curValue, newLangName.c_str(), engMapping});
 				}
 			}
 		}
@@ -316,11 +316,11 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				RValue textController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
 				RValue SetLanguageMethod = g_ModuleInterface->CallBuiltin("variable_instance_get", { textController, "SetLanguage" });
 				curLanguagePackFont = namePos;
-				g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", line });
+				g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", line.c_str() });
 			}
 			else
 			{
-				g_ModuleInterface->Print(CM_RED, "Couldn't find language pack saved in LanguagePacks/SavedLanguage");
+				LogPrint(LOG_SEVERITY_ERROR, "Couldn't find language pack saved in LanguagePacks/SavedLanguage");
 			}
 		}
 	}
@@ -344,26 +344,26 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 			RValue curKey = textContainerKeyNames[i];
 			RValue value = g_ModuleInterface->CallBuiltin("variable_instance_get", { textContainer, curKey });
 			
-			outFile << "\t" << curKey.AsString().data() << ":\n";
+			outFile << "\t" << curKey.ToString().data() << ":\n";
 			outFile << "\t{\n";
 			RValue langKeys = g_ModuleInterface->CallBuiltin("variable_instance_get_names", { value });
 			int langKeysLen = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { langKeys }).m_Real));
 			for (int j = 0; j < langKeysLen; j++)
 			{
 				RValue lang = langKeys[j];
-				if (strcmp(lang.AsString().data(), "selectedLanguage") == 0)
+				if (strcmp(lang.ToString().data(), "selectedLanguage") == 0)
 				{
 					continue;
 				}
 				RValue curText = g_ModuleInterface->CallBuiltin("variable_instance_get", { value, lang });
 				if (curText.m_Kind == VALUE_ARRAY)
 				{
-					outFile << "\t\t" << lang.AsString().data() << ": ";
+					outFile << "\t\t" << lang.ToString().data() << ": ";
 					outFile << "[";
 					int textArrLen = static_cast<int>(lround(g_ModuleInterface->CallBuiltin("array_length", { curText }).m_Real));
 					for (int k = 0; k < textArrLen; k++)
 					{
-						std::string curStr = std::string(curText[k].AsString());
+						std::string curStr = curText[k].ToString();
 						strReplaceAll(curStr, "\n", "\\n");
 						outFile << "\"" << curStr.c_str() << "\"";
 						if (k != textArrLen - 1)
@@ -380,10 +380,10 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				}
 				else if (curText.m_Kind == VALUE_STRING)
 				{
-					outFile << "\t\t" << lang.AsString().data() << ": \"";
-					std::string curStr = std::string(curText.AsString());
+					outFile << "\t\t" << lang.ToString().data() << ": \"";
+					std::string curStr = curText.ToString();
 					strReplaceAll(curStr, "\n", "\\n");
-					outFile << curText.AsString().data() << "\"";
+					outFile << curText.ToString().data() << "\"";
 					if (j != textContainerKeyLen - 1)
 					{
 						outFile << ",";
@@ -392,7 +392,7 @@ void TextControllerCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, R
 				}
 				else
 				{
-					g_ModuleInterface->Print(CM_RED, "UNHANDLED TYPE FOR %s", curKey.AsString().data());
+					LogPrint(LOG_SEVERITY_ERROR, "UNHANDLED TYPE FOR %s", curKey.ToString().data());
 				}
 			}
 			outFile << "\t}";
@@ -415,12 +415,12 @@ void OptionsCreateAfter(std::tuple<CInstance*, CInstance*, CCode*, int, RValue*>
 	bool hasCurrentLanguageBeenSet = false;
 	for (std::string& langName : languageNamesList)
 	{
-		if (!hasCurrentLanguageBeenSet && langName.compare(CurrentLanguage.AsString()) == 0)
+		if (!hasCurrentLanguageBeenSet && langName.compare(CurrentLanguage.ToString()) == 0)
 		{
 			RValue languageOptionsLen = g_ModuleInterface->CallBuiltin("array_length", { languageOptions });
 			g_ModuleInterface->CallBuiltin("variable_instance_set", { Self, "selectedLanguageOption", languageOptionsLen });
 			hasCurrentLanguageBeenSet = true;
 		}
-		g_ModuleInterface->CallBuiltin("array_push", { languageOptions, langName });
+		g_ModuleInterface->CallBuiltin("array_push", { languageOptions, langName.c_str() });
 	}
 }
