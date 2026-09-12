@@ -3,7 +3,7 @@
 #include <CallbackManager/CallbackManagerInterface.h>
 #include <iostream>
 
-#define VERSION_NUM "v1.1.0"
+#define VERSION_NUM "v1.1.1"
 #define MODNAME "Holocure Language Pack Mod " VERSION_NUM 
 
 extern CallbackManagerInterface* callbackManagerInterfacePtr;
