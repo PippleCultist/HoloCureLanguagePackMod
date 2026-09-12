@@ -16,6 +16,10 @@ YYTKInterface* g_ModuleInterface = nullptr;
 PFUNC_YYGMLScript origScribbleFontAddFromProjectScript = nullptr;
 PFUNC_YYGMLScript origFoodRecipesScript = nullptr;
 
+TRoutine origDrawTextFunc;
+TRoutine origDrawTextColorFunc;
+TRoutine origDrawTextExtColorFunc;
+
 int objTextControllerIndex = -1;
 int jpFont = -1;
 
@@ -85,17 +89,17 @@ void initHooks()
 		return;
 	}
 
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text", DrawTextBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text", DrawTextBefore, nullptr, &origDrawTextFunc)))
 	{
 		callbackManagerInterfacePtr->LogToFile(MODNAME, "Failed to register callback for %s", "draw_text");
 		return;
 	}
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text_color", DrawTextBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text_color", DrawTextColorBefore, nullptr, &origDrawTextColorFunc)))
 	{
 		callbackManagerInterfacePtr->LogToFile(MODNAME, "Failed to register callback for %s", "draw_text_color");
 		return;
 	}
-	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text_ext_color", DrawTextBefore, nullptr, nullptr)))
+	if (!AurieSuccess(callbackManagerInterfacePtr->RegisterBuiltinFunctionCallback(MODNAME, "draw_text_ext_color", DrawTextExtColorBefore, nullptr, &origDrawTextExtColorFunc)))
 	{
 		callbackManagerInterfacePtr->LogToFile(MODNAME, "Failed to register callback for %s", "draw_text_ext_color");
 		return;

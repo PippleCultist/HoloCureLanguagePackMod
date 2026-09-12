@@ -14,6 +14,10 @@ extern std::ofstream outFile;
 extern PFUNC_YYGMLScript origScribbleFontAddFromProjectScript;
 extern PFUNC_YYGMLScript origFoodRecipesScript;
 
+extern TRoutine origDrawTextFunc;
+extern TRoutine origDrawTextColorFunc;
+extern TRoutine origDrawTextExtColorFunc;
+
 extern int objTextControllerIndex;
 extern int jpFont;
 

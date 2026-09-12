@@ -136,7 +136,6 @@ std::string getTextSwapMapping(RValue** Args)
 		if (findMapping != languageTextSwapMap[curLanguagePackFont].end())
 		{
 			text = findMapping->second;
-			*Args[2] = text.c_str();
 		}
 	}
 	return text;
@@ -169,7 +168,7 @@ void drawWrappingText(double& curTextXOffset, double& curTextYOffset, std::strin
 		drawStr = drawStr.substr(numCharDrawn);
 		curTextXOffset = 0;
 		curTextYOffset += 10;
-		drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.capacity() }).ToDouble();
+		drawnTextSize = g_ModuleInterface->CallBuiltin("string_width", { drawStr.c_str() }).ToDouble();
 	}
 	if (drawnTextSize != 0)
 	{
@@ -271,19 +270,25 @@ RValue& SaveSettingsBefore(CInstance* Self, CInstance* Other, RValue& ReturnValu
 	if (curLanguagePackFont != -1)
 	{
 		RValue objTextController = g_ModuleInterface->CallBuiltin("instance_find", { objTextControllerIndex, 0 });
-		RValue languages = g_ModuleInterface->CallBuiltin("variable_instance_get", { objTextController, "languages" });
-		RValue english = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, "English" });
-		RValue languageName;
-		if (english.m_Kind == VALUE_STRING)
+		if (objTextController.m_Kind != VALUE_UNDEFINED)
 		{
-			languageName = english;
+			RValue languages = g_ModuleInterface->CallBuiltin("variable_instance_get", { objTextController, "languages" });
+			if (languages.m_Kind != VALUE_UNDEFINED)
+			{
+				RValue english = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, "English" });
+				RValue languageName;
+				if (english.m_Kind == VALUE_STRING)
+				{
+					languageName = english;
+				}
+				else
+				{
+					RValue languagesNames = g_ModuleInterface->CallBuiltin("variable_instance_get_names", { languages });
+					languageName = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, languagesNames[0] });
+				}
+				g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageName });
+			}
 		}
-		else
-		{
-			RValue languagesNames = g_ModuleInterface->CallBuiltin("variable_instance_get_names", { languages });
-			languageName = g_ModuleInterface->CallBuiltin("variable_instance_get", { languages, languagesNames[0] });
-		}
-		g_ModuleInterface->CallBuiltin("variable_global_set", { "CurrentLanguage", languageName });
 	}
 	return ReturnValue;
 }
